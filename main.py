@@ -163,7 +163,8 @@ async def execute_order(request: ExecuteRequest):
     - expected_position_size 검증 (포지션 불일치 감지)
     """
     # 요청을 dict로 변환 (hmac_signature 검증용)
-    payload = request.model_dump()
+    # exclude_unset=True: JSON에 없던 필드(Pydantic 기본값 None)를 제외해 메인서버 canonical과 일치시킴
+    payload = request.model_dump(exclude_unset=True)
 
     # 1. Timestamp 검증
     if not check_timestamp(payload.get("timestamp", "")):
