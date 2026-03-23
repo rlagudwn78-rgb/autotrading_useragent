@@ -366,23 +366,16 @@ class AgentExchangeClient:
                     "positionIdx": 0,
                 })
             elif self.exchange_id == "bitget":
-                # 단방향 모드: 신규 exchange 인스턴스로 holdSide 오판 방지
-                # 방향은 side로만, reduceOnly 필수
-                position = await self.get_position(symbol)
-                if not position:
-                    logger.warning(f"No position found to set SL for {symbol}")
-                    return False
-                ccxt_symbol = self._to_ccxt_symbol(symbol)
-                sl_side = "sell" if position.side == "LONG" else "buy"
-                ex = self._new_exchange()
-                try:
-                    await ex.load_markets()
-                    await ex.create_order(
-                        ccxt_symbol, "stop_market", sl_side, float(position.qty), None,
-                        {"stopPrice": float(rounded_sl), "reduceOnly": True}
-                    )
-                finally:
-                    await ex.close()
+                # 단방향 모드: place-pos-tpsl 엔드포인트 사용 (holdSide 불필요)
+                await self.exchange.private_mix_post_v2_mix_order_place_pos_tpsl({
+                    "symbol": symbol,
+                    "productType": "USDT-FUTURES",
+                    "marginMode": "crossed",
+                    "marginCoin": "USDT",
+                    "stopLossTriggerPrice": str(rounded_sl),
+                    "stopLossTriggerType": "fill_price",
+                    "stopLossExecutePrice": "0",
+                })
             else:
                 ccxt_symbol = self._to_ccxt_symbol(symbol)
                 position = await self.get_position(symbol)
